@@ -47,6 +47,11 @@ cd backend
 pip install -r requirements.txt
 python app.py
 ```
+如果后端启动失败，说明5000端口被占用，先终止进程再启动：
+```bash
+netstat -ano | findstr :5000
+taskkill /PID XXXXX /F
+```
 
 后端运行在 http://localhost:5000
 
