@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.eggs/
+venv/
+.venv/
+env/
+*.so
+
+# Node
+node_modules/
+dist/**
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python virtualenv
+venv/
+.venv/
+
+# Logs
+*.log
+
+# Model (if large)
+backend/models/model.pkl

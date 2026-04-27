@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile config.py)",
+      "Bash(python -m py_compile api/routes.py)",
+      "Bash(python -m py_compile websocket/socket_handler.py)",
+      "Bash(python -m py_compile pipeline/capture_manager.py)",
+      "Bash(python -m py_compile pipeline/flow_reassembly.py)",
+      "Bash(git *)"
+    ]
+  }
+}
