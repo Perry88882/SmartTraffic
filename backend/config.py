@@ -14,7 +14,9 @@ ICMP_TIMEOUT = 10
 # 流表清理间隔（秒）
 FLOW_CLEANUP_INTERVAL = 30
 
-# 抓包配置
+# 抓包模式: "auto" 自动检测, "real" 强制真实, "simulated" 强制模拟
+CAPTURE_MODE = "auto"
+PACKET_QUEUE_SIZE = 10000
 DEFAULT_SNAPLEN = 65535
 DEFAULT_PROMISC = False
 

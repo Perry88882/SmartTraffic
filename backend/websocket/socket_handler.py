@@ -1,156 +1,194 @@
 """
-WebSocket 事件处理
-通过 SocketIO 向前端实时推送分类结果和统计汇总。
+WebSocket 事件处理 — 集成真实数据管道
+Pipeline: CaptureManager → packet_parser → flow_reassembly → feature_extractor → inference
 """
-
 import logging
-import random
-import threading
 import time
+from collections import defaultdict
 from datetime import datetime
 
 import eventlet
 from flask import request
 from flask_socketio import Namespace, emit
 
-from config import (
-    CLASSIFICATION_INTERVAL,
-    LABELS,
-    SIMULATED_PUBLIC_IPS,
-    SIMULATED_SUBNETS,
-    STATISTICS_INTERVAL,
-)
+from config import CLASSIFICATION_INTERVAL, LABELS, STATISTICS_INTERVAL
+from database import db
+from pipeline.capture_manager import CaptureManager
+from pipeline.flow_reassembly import FlowReassembler
+from pipeline.feature_extractor import extract_features
+from pipeline.inference import classifier
+from pipeline.packet_parser import parse_packet
 
 logger = logging.getLogger(__name__)
 
-# 模拟协议列表
-PROTOCOLS = ["TCP", "UDP"]
-
-
-def _random_ip(is_src: bool = True) -> str:
-    """生成随机模拟 IP 地址"""
-    subnet = random.choice(SIMULATED_SUBNETS)
-    host = random.randint(2, 254)
-    return f"{subnet}{host}"
-
-
-def _random_port(is_server: bool = False) -> int:
-    """生成随机端口号；服务端常用端口单独处理"""
-    if is_server:
-        return random.choice([443, 80, 8080, 8443, 53, 25, 110, 993, 22, 3389])
-    return random.randint(1024, 65535)
-
-
-def _generate_classification() -> dict:
-    """生成一条模拟分类结果"""
-    dst_ip = random.choice(SIMULATED_PUBLIC_IPS)
-    label = random.choice(LABELS)
-    # 根据标签调整置信度范围，使数据更逼真
-    confidence = round(random.uniform(0.70, 0.99), 4)
-    return {
-        "type": "classification",
-        "data": {
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "src_ip": _random_ip(is_src=True),
-            "dst_ip": dst_ip,
-            "src_port": _random_port(is_server=False),
-            "dst_port": _random_port(is_server=True),
-            "protocol": random.choice(PROTOCOLS),
-            "label": label,
-            "confidence": confidence,
-        },
-    }
-
-
-def _generate_statistics(start_time: float, total_bytes: int) -> dict:
-    """生成一条模拟统计汇总"""
-    elapsed = max(int(time.time() - start_time), 1)
-    # 模拟总字节数持续增长
-    new_bytes = total_bytes + random.randint(500_000, 5_000_000)
-    current_rate = random.randint(100_000, 10_000_000)
-    return {
-        "type": "statistics",
-        "data": {
-            "total_bytes": new_bytes,
-            "current_rate": current_rate,
-            "duration_seconds": elapsed,
-            "category_distribution": {
-                "视频": random.randint(30, 50),
-                "网页": random.randint(15, 30),
-                "游戏": random.randint(10, 20),
-                "会议": random.randint(3, 12),
-                "下载": random.randint(2, 10),
-                "音乐": random.randint(2, 8),
-                "其他": random.randint(1, 5),
-            },
-        },
-    }
-
 
 class SocketManager:
-    """
-    WebSocket 连接管理与数据推送。
-    使用 eventlet 绿色线程（或原生线程）定时向前端推送模拟数据。
-    """
-
     def __init__(self):
-        self._simulation_running = False
-        self._simulation_thread = None
+        self._running = False
+        self._thread = None
         self._start_time = 0.0
         self._total_bytes = 0
+        self._total_packets = 0
+        self._category_counts = defaultdict(int)
+        self._socketio = None
+        self._session_id = None
+        self._capture = CaptureManager()
+        self._reassembler = FlowReassembler()
 
-    def start_simulation(self, interface: str):
-        """启动模拟数据生成线程"""
-        if self._simulation_running:
-            logger.warning("模拟已在运行中")
+    def init_app(self, socketio):
+        self._socketio = socketio
+
+    @property
+    def mode(self):
+        return self._capture.mode
+
+    @property
+    def is_running(self):
+        return self._running
+
+    def start(self, interface: str):
+        if self._running:
             return
-        self._simulation_running = True
+        self._running = True
         self._start_time = time.time()
         self._total_bytes = 0
-        # 使用 eventlet 绿色线程（兼容 SocketIO）
-        self._simulation_thread = eventlet.spawn(self._simulation_loop)
-        logger.info(f"[SocketManager] 模拟开始，网卡: {interface}")
+        self._total_packets = 0
+        self._category_counts = defaultdict(int)
+        self._reassembler = FlowReassembler()
+        self._capture.start(interface)
+        self._session_id = db.create_session(interface)
+        self._thread = self._socketio.start_background_task(self._run)
+        logger.info(f"[Socket] 已启动, 接口={interface}, 模式={self._capture.mode}, 会话ID={self._session_id}")
 
-    def stop_simulation(self):
-        """停止模拟数据生成"""
-        self._simulation_running = False
-        if self._simulation_thread:
-            eventlet.kill(self._simulation_thread)
-            self._simulation_thread = None
-        logger.info("[SocketManager] 模拟已停止")
+    def stop(self):
+        if not self._running:
+            return
+        self._running = False
+        self._capture.stop()
+        if self._session_id:
+            db.end_session(self._session_id, self._total_packets, self._total_bytes)
+        logger.info(f"[Socket] 已停止, 总包数={self._total_packets}, 总字节={self._total_bytes}")
 
-    def _simulation_loop(self):
-        """主循环：定时推送分类结果和统计汇总"""
-        last_classification = 0
-        last_statistics = 0
-        while self._simulation_running:
+    def _run(self):
+        last_cls = 0
+        last_stats = 0
+        last_cleanup = 0
+        while self._running:
             now = time.time()
-            # 每 CLASSIFICATION_INTERVAL 秒推送一条分类结果
-            if now - last_classification >= CLASSIFICATION_INTERVAL:
-                msg = _generate_classification()
-                emit("classification", msg, broadcast=True, namespace="/")
-                last_classification = now
-            # 每 STATISTICS_INTERVAL 秒推送一条统计汇总
-            if now - last_statistics >= STATISTICS_INTERVAL:
-                msg = _generate_statistics(self._start_time, self._total_bytes)
-                self._total_bytes = msg["data"]["total_bytes"]
-                emit("statistics", msg, broadcast=True, namespace="/")
-                last_statistics = now
-            eventlet.sleep(0.5)
+            self._process_packets()
+
+            if now - last_cls >= CLASSIFICATION_INTERVAL:
+                self._emit_classification()
+                last_cls = now
+            if now - last_stats >= STATISTICS_INTERVAL:
+                self._emit_statistics()
+                last_stats = now
+            if now - last_cleanup >= 30:
+                n = self._reassembler.cleanup_stale_flows()
+                if n > 0:
+                    logger.debug(f"[Socket] 清理 {n} 条过期流, 当前流表大小={self._reassembler.flow_count}")
+                last_cleanup = now
+            eventlet.sleep(0.3)
+
+    def _process_packets(self):
+        """从抓包队列消费数据包，经管道处理后推送并写入数据库"""
+        q = self._capture.packet_queue
+        while not q.empty():
+            try:
+                pkt = q.get_nowait()
+            except Exception:
+                break
+
+            # 如果数据包已经是解析过的 dict（来自模拟模式），直接使用
+            # 如果是 scapy 原始包（来自真实抓包），需要先解析
+            if isinstance(pkt, dict):
+                parsed = pkt
+            else:
+                parsed = parse_packet(pkt)
+                if parsed is None:
+                    continue
+
+            self._total_packets += 1
+            self._total_bytes += parsed.get("length", 0)
+
+            # 流重组
+            flow = self._reassembler.process_packet(parsed)
+
+            # 每个包都进行推理（特征提取器对单包流也有合理的特征计算）
+            # 特征提取
+            features = extract_features(flow)
+
+            # 推理分类
+            result = classifier.predict(features)
+
+            # 写入数据库
+            flow_db_id = None
+            try:
+                flow_db_id = db.upsert_flow(self._session_id, flow)
+                db.insert_classification(
+                    session_id=self._session_id,
+                    flow_id=flow_db_id,
+                    label=result["label"],
+                    confidence=result["confidence"],
+                    features=features,
+                    src_ip=parsed["src_ip"],
+                    dst_ip=parsed["dst_ip"],
+                    src_port=parsed["src_port"],
+                    dst_port=parsed["dst_port"],
+                    protocol=parsed["protocol"],
+                )
+            except Exception as e:
+                logger.error(f"[Socket] 数据库写入失败: {e}")
+
+            self._category_counts[result["label"]] += 1
+
+    def _emit_classification(self):
+        """从数据库取最新分类记录推送"""
+        try:
+            records = db.query_history(session_id=self._session_id, limit=1)
+            if records:
+                rec = records[0]
+                msg = {
+                    "type": "classification",
+                    "data": {
+                        "timestamp": rec["created_at"],
+                        "src_ip": rec["src_ip"],
+                        "dst_ip": rec["dst_ip"],
+                        "src_port": rec["src_port"],
+                        "dst_port": rec["dst_port"],
+                        "protocol": rec["protocol"],
+                        "label": rec["label"],
+                        "confidence": round(rec["confidence"], 4),
+                    },
+                }
+                self._socketio.emit("classification", msg, namespace="/")
+        except Exception as e:
+            logger.error(f"[Socket] 分类推送失败: {e}")
+
+    def _emit_statistics(self):
+        elapsed = max(int(time.time() - self._start_time), 1)
+        msg = {
+            "type": "statistics",
+            "data": {
+                "total_bytes": self._total_bytes,
+                "current_rate": int(self._total_bytes / elapsed),
+                "total_packets": self._total_packets,
+                "duration_seconds": elapsed,
+                "category_distribution": {
+                    k: self._category_counts.get(k, 0) for k in LABELS
+                },
+            },
+        }
+        self._socketio.emit("statistics", msg, namespace="/")
 
 
-# 全局单例
 socket_manager = SocketManager()
 
 
 class SmartTrafficNamespace(Namespace):
-    """SocketIO 命名空间处理器"""
-
     def on_connect(self):
-        client_id = request.sid
-        logger.info(f"[SocketIO] 客户端连接: {client_id}")
-        emit("welcome", {"message": "已连接到 SmartTraffic 服务器"}, room=client_id)
+        logger.info(f"[SocketIO] 客户端连接: {request.sid}")
+        emit("welcome", {"message": "已连接"})
 
     def on_disconnect(self):
-        client_id = request.sid
-        logger.info(f"[SocketIO] 客户端断开: {client_id}")
+        logger.info(f"[SocketIO] 客户端断开: {request.sid}")

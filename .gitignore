@@ -39,5 +39,8 @@ venv/
 # Model (if large)
 backend/models/model.pkl
 
+# Database
+backend/data/
+
 # Claude
 .claude/

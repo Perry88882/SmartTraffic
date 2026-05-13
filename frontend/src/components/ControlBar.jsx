@@ -1,100 +1,87 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-/**
- * 顶部控制栏：
- *   网卡选择下拉框 + 开始/停止按钮 + 运行状态指示
- */
 export default function ControlBar({ isRunning, onRunningChange, isConnected }) {
-  const [interfaces, setInterfaces] = useState([]);
-  const [selectedInterface, setSelectedInterface] = useState("eth0");
-  const [loading, setLoading] = useState(false);
+  const [ifaces, setIfaces] = useState([]);
+  const [selectedName, setSelectedName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState({ is_admin: false, mode: "detecting", is_running: false });
 
-  // 页面加载时获取网卡列表
   useEffect(() => {
-    axios
-      .get("/api/cards")
-      .then((res) => {
-        const list = res.data.interfaces || [];
-        setInterfaces(list);
-        if (list.length > 0) setSelectedInterface(list[0]);
-      })
-      .catch((err) => {
-        console.error("获取网卡列表失败:", err);
-        // 降级使用默认列表
-        setInterfaces(["eth0", "wlan0", "lo"]);
-      });
+    axios.get("/api/status").then(r => {
+      setStatus(r.data);
+      if (r.data.is_running) onRunningChange(true);
+    }).catch(() => {});
+
+    axios.get("/api/cards").then(r => {
+      const list = r.data.interfaces || [];
+      setIfaces(list);
+      if (list.length > 0) setSelectedName(list[0].name);
+    }).catch(() => {
+      setIfaces([
+        { name: "eth0", display: "以太网 (eth0)" },
+        { name: "wlan0", display: "无线网卡 (wlan0)" },
+      ]);
+      setSelectedName("eth0");
+    });
   }, []);
 
-  const handleStart = async () => {
-    setLoading(true);
-    try {
-      await axios.post("/api/start", { interface: selectedInterface });
+  const start = () => {
+    setBusy(true);
+    axios.post("/api/start", { interface: selectedName }).then(() => {
       onRunningChange(true);
-    } catch (err) {
-      console.error("启动抓包失败:", err);
-      alert("启动失败，请确认后端服务已启动");
-    } finally {
-      setLoading(false);
-    }
+      setBusy(false);
+    }).catch(() => setBusy(false));
   };
 
-  const handleStop = async () => {
-    setLoading(true);
-    try {
-      await axios.post("/api/stop");
+  const stop = () => {
+    setBusy(true);
+    axios.post("/api/stop").then(() => {
       onRunningChange(false);
-    } catch (err) {
-      console.error("停止抓包失败:", err);
-    } finally {
-      setLoading(false);
-    }
+      setBusy(false);
+    }).catch(() => setBusy(false));
   };
+
+  const modeLabel = status.mode === "real" ? "真实抓包" : status.mode === "simulated" ? "模拟模式" : "检测中";
+  const modeClass = `mode-badge mode-${status.mode}`;
 
   return (
     <div className="control-bar">
-      <h1 className="app-title">SmartTraffic 智能流量分析</h1>
+      <h1 className="app-title">SmartTraffic</h1>
 
-      <div className="control-group">
-        <label className="control-label">网卡</label>
-        <select
-          value={selectedInterface}
-          onChange={(e) => setSelectedInterface(e.target.value)}
-          disabled={isRunning}
-          className="control-select"
-        >
-          {interfaces.map((iface) => (
-            <option key={iface} value={iface}>
-              {iface}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!status.is_admin && (
+        <span className="admin-warning">非管理员 — 将使用模拟数据</span>
+      )}
+      <span className={modeClass}>{modeLabel}</span>
 
-      {!isRunning ? (
-        <button
-          className="btn btn-start"
-          onClick={handleStart}
-          disabled={loading}
-        >
-          {loading ? "启动中..." : "开始抓包"}
+      <select
+        value={selectedName}
+        onChange={e => setSelectedName(e.target.value)}
+        disabled={isRunning}
+        className="control-select"
+      >
+        {ifaces.length === 0 && <option value="">无可用网卡</option>}
+        {ifaces.map(i => (
+          <option key={i.name} value={i.name}>{i.display}</option>
+        ))}
+      </select>
+
+      {isRunning ? (
+        <button className="btn btn-stop" onClick={stop} disabled={busy}>
+          {busy ? "..." : "停止"}
         </button>
       ) : (
-        <button
-          className="btn btn-stop"
-          onClick={handleStop}
-          disabled={loading}
-        >
-          {loading ? "停止中..." : "停止抓包"}
+        <button className="btn btn-start" onClick={start} disabled={busy || ifaces.length === 0}>
+          {busy ? "..." : "开始抓包"}
         </button>
       )}
 
-      <div className="status-indicator">
+      <span className="status-indicator">
         <span className={`status-dot ${isRunning ? "running" : isConnected ? "idle" : "offline"}`} />
-        <span className="status-text">
-          {isRunning ? "运行中" : isConnected ? "待命中" : "离线"}
+        <span className="status-text" style={{color: isConnected ? "#00d2a0" : "#ff4757"}}>
+          {isConnected ? "已连接" : "未连接"}
         </span>
-      </div>
+      </span>
     </div>
   );
 }

@@ -309,3 +309,40 @@ body {
   background: rgba(0, 210, 160, 0.1);
   color: var(--accent-green);
 }
+
+/* ---------- Mode & Admin Badges ---------- */
+.admin-warning {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.mode-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mode-badge.mode-real {
+  background: rgba(0, 210, 160, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 210, 160, 0.3);
+}
+
+.mode-badge.mode-simulated {
+  background: rgba(255, 192, 72, 0.15);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(255, 192, 72, 0.3);
+}
+
+.mode-badge.mode-detecting {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+}
