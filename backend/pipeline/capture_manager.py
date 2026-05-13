@@ -32,18 +32,33 @@ def _is_admin() -> bool:
         return False
 
 
-def _can_use_scapy() -> bool:
-    """检查 scapy + Npcap 是否可用（不实际抓包，只检查导入和配置）"""
+def _can_use_scapy() -> tuple[bool, str]:
+    """检查 scapy + Npcap 是否可用，返回 (可用, 原因)"""
     try:
-        from scapy.all import sniff
+        from scapy.all import sniff  # noqa: F401
         from scapy.config import conf
         conf.use_pcap = True
         conf.use_npcap = True
-        from scapy.interfaces import get_if_list
-        ifaces = get_if_list()
-        return len(ifaces) > 0
-    except Exception:
-        return False
+
+        # 优先用 get_windows_if_list（新版 scapy），退化为 get_if_list（旧版）
+        if platform.system() == "Windows":
+            try:
+                from scapy.interfaces import get_windows_if_list
+                ifaces = get_windows_if_list()
+            except ImportError:
+                from scapy.interfaces import get_if_list
+                ifaces = get_if_list()
+        else:
+            from scapy.interfaces import get_if_list
+            ifaces = get_if_list()
+
+        if len(ifaces) == 0:
+            return False, "未检测到网卡（Npcap 是否已安装？https://npcap.com）"
+        return True, f"检测到 {len(ifaces)} 张网卡"
+    except ImportError as e:
+        return False, f"scapy 导入失败: {e}"
+    except Exception as e:
+        return False, f"scapy 检测异常: {e}"
 
 
 class CaptureManager:
@@ -54,19 +69,34 @@ class CaptureManager:
         self._running = False
         self._thread = None
         self._mode = "simulated"
+        self._mode_reason = ""
         self.packet_queue = queue.Queue(maxsize=packet_queue_size)
         self._packet_count = 0
 
         # 检测真实抓包可行性
         if mode in ("auto", "real"):
-            if _is_admin() and _can_use_scapy():
-                self._mode = "real"
+            if not _is_admin():
+                self._mode_reason = "未以管理员身份运行 — 右键终端 → 以管理员身份运行"
+                logger.warning(f"[Capture] {self._mode_reason}")
+            else:
+                ok, reason = _can_use_scapy()
+                if ok:
+                    self._mode = "real"
+                    logger.info(f"[Capture] 真实抓包模式 ({reason})")
+                else:
+                    self._mode_reason = reason
+                    logger.warning(f"[Capture] 模拟模式 — {reason}")
         if mode == "simulated":
+            self._mode_reason = "配置强制模拟模式"
             self._mode = "simulated"
 
     @property
     def mode(self):
         return self._mode
+
+    @property
+    def mode_reason(self):
+        return self._mode_reason
 
     @property
     def packet_count(self):

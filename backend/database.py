@@ -26,6 +26,31 @@ class Database:
         with open(SCHEMA_PATH, encoding="utf-8") as f:
             self.conn.executescript(f.read())
         self.conn.commit()
+        self._migrate()
+
+    def _migrate(self):
+        """为旧数据库添加五层模型扩展列"""
+        new_cols = {
+            "src_mac": "VARCHAR(17) DEFAULT ''",
+            "dst_mac": "VARCHAR(17) DEFAULT ''",
+            "frame_type": "VARCHAR(10) DEFAULT ''",
+            "ttl": "INTEGER DEFAULT 0",
+            "ip_version": "INTEGER DEFAULT 4",
+            "ip_flags": "VARCHAR(10) DEFAULT ''",
+            "tcp_flags": "VARCHAR(30) DEFAULT ''",
+            "window_size": "INTEGER DEFAULT 0",
+            "payload_size": "INTEGER DEFAULT 0",
+            "analysis_json": "TEXT",
+        }
+        existing = {r[1] for r in self.conn.execute("PRAGMA table_info(classification)")}
+        for col, col_def in new_cols.items():
+            if col not in existing:
+                try:
+                    self.conn.execute(f"ALTER TABLE classification ADD COLUMN {col} {col_def}")
+                    logger.info(f"[DB] 迁移: 添加列 classification.{col}")
+                except Exception as e:
+                    logger.warning(f"[DB] 迁移 {col} 失败: {e}")
+        self.conn.commit()
 
     # ── 会话操作 ──
 
@@ -49,6 +74,54 @@ class Database:
             "SELECT * FROM capture_session WHERE status='running' ORDER BY start_time DESC"
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def get_sessions(self, limit=50, date_from=None, date_to=None) -> list[dict]:
+        query = "SELECT * FROM capture_session WHERE 1=1"
+        params = []
+        if date_from:
+            query += " AND start_time >= ?"
+            params.append(date_from)
+        if date_to:
+            query += " AND start_time <= ?"
+            params.append(date_to + " 23:59:59")
+        query += " ORDER BY start_time DESC LIMIT ?"
+        params.append(limit)
+        rows = self.conn.execute(query, params).fetchall()
+        return [dict(r) for r in rows]
+
+    def delete_session(self, session_id: int) -> int:
+        """删除会话及其关联的流和分类记录，返回删除的分类数"""
+        cls_count = self.conn.execute(
+            "SELECT COUNT(*) FROM classification WHERE session_id=?", (session_id,)
+        ).fetchone()[0]
+        self.conn.execute("DELETE FROM classification WHERE session_id=?", (session_id,))
+        self.conn.execute("DELETE FROM flow WHERE session_id=?", (session_id,))
+        self.conn.execute("DELETE FROM capture_session WHERE id=?", (session_id,))
+        self.conn.commit()
+        return cls_count
+
+    def get_available_dates(self) -> list[str]:
+        """返回有数据的日期列表"""
+        rows = self.conn.execute(
+            "SELECT DISTINCT substr(start_time, 1, 10) AS d FROM capture_session ORDER BY d DESC LIMIT 60"
+        ).fetchall()
+        return [r["d"] for r in rows]
+
+    def get_session_detail(self, session_id: int) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM capture_session WHERE id=?", (session_id,)
+        ).fetchone()
+        if not row:
+            return None
+        result = dict(row)
+        # 附加上该会话的分类统计
+        cls_rows = self.conn.execute(
+            "SELECT label, COUNT(*) AS cnt FROM classification WHERE session_id=? GROUP BY label",
+            (session_id,),
+        ).fetchall()
+        result["category_distribution"] = {r["label"]: r["cnt"] for r in cls_rows}
+        result["total_classifications"] = sum(r["cnt"] for r in cls_rows)
+        return result
 
     # ── 流操作 ──
 
@@ -90,6 +163,10 @@ class Database:
         self, session_id: int, flow_id: int, label: str,
         confidence: float, features, src_ip: str, dst_ip: str,
         src_port: int, dst_port: int, protocol: str,
+        src_mac: str = "", dst_mac: str = "", frame_type: str = "",
+        ttl: int = 0, ip_version: int = 4, ip_flags: str = "",
+        tcp_flags: str = "", window_size: int = 0, payload_size: int = 0,
+        analysis_json: str = "",
     ) -> int:
         import numpy as np
         feats_json = json.dumps(
@@ -98,16 +175,22 @@ class Database:
         cur = self.conn.execute(
             """INSERT INTO classification
                (session_id, flow_id, label, confidence, features,
+                src_mac, dst_mac, frame_type, ttl, ip_version, ip_flags,
+                tcp_flags, window_size, payload_size, analysis_json,
                 src_ip, dst_ip, src_port, dst_port, protocol)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                       ?, ?, ?, ?, ?)""",
             (session_id, flow_id, label, confidence, feats_json,
+             src_mac, dst_mac, frame_type, ttl, ip_version, ip_flags,
+             tcp_flags, window_size, payload_size, analysis_json,
              src_ip, dst_ip, src_port, dst_port, protocol),
         )
         self.conn.commit()
         return cur.lastrowid
 
     def query_history(
-        self, session_id=None, label=None, limit=100, offset=0
+        self, session_id=None, label=None, date_from=None, date_to=None,
+        limit=100, offset=0,
     ) -> list[dict]:
         query = "SELECT * FROM classification WHERE 1=1"
         params = []
@@ -117,6 +200,12 @@ class Database:
         if label:
             query += " AND label=?"
             params.append(label)
+        if date_from:
+            query += " AND created_at >= ?"
+            params.append(date_from)
+        if date_to:
+            query += " AND created_at <= ?"
+            params.append(date_to + " 23:59:59")
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
         params.extend([limit, offset])
         rows = self.conn.execute(query, params).fetchall()
@@ -163,7 +252,7 @@ class Database:
             return np.array([]), np.array([])
         return np.array(X_list), np.array(y_list)
 
-    def get_history_count(self, session_id=None, label=None) -> int:
+    def get_history_count(self, session_id=None, label=None, date_from=None, date_to=None) -> int:
         query = "SELECT COUNT(*) AS total FROM classification WHERE 1=1"
         params = []
         if session_id is not None:
@@ -172,6 +261,12 @@ class Database:
         if label:
             query += " AND label=?"
             params.append(label)
+        if date_from:
+            query += " AND created_at >= ?"
+            params.append(date_from)
+        if date_to:
+            query += " AND created_at <= ?"
+            params.append(date_to + " 23:59:59")
         row = self.conn.execute(query, params).fetchone()
         return row["total"] if row else 0
 

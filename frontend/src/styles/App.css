@@ -346,3 +346,708 @@ body {
   background: rgba(74, 158, 255, 0.15);
   color: var(--accent-blue);
 }
+
+/* ---------- History Button ---------- */
+.btn-history {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-history:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+/* ---------- Modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 1200px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.modal-close:hover {
+  color: var(--accent-red);
+}
+
+.modal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ---------- Session List Sidebar ---------- */
+.modal-sidebar {
+  width: 280px;
+  border-right: 1px solid var(--border-color);
+  padding: 16px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.modal-sidebar h3 {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---------- Date Filter ---------- */
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.date-input {
+  flex: 1;
+  padding: 5px 6px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 11px;
+  outline: none;
+  min-width: 0;
+}
+
+.date-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+.date-sep {
+  color: var(--text-secondary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.date-clear {
+  background: none;
+  border: none;
+  color: var(--accent-red);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.date-quick {
+  width: 100%;
+  padding: 5px 8px;
+  margin-bottom: 10px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
+.date-quick:focus {
+  border-color: var(--accent-blue);
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-item {
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.session-item:hover {
+  border-color: var(--accent-blue);
+}
+
+.session-item.active {
+  border-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.08);
+}
+
+.session-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.session-iface {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.session-delete {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.session-delete:hover {
+  opacity: 1;
+}
+
+.session-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.session-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.session-status {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.session-status.running {
+  background: rgba(0, 210, 160, 0.15);
+  color: var(--accent-green);
+}
+
+.session-status.stopped {
+  background: rgba(255, 192, 72, 0.15);
+  color: var(--accent-yellow);
+}
+
+/* ---------- Modal Main Area ---------- */
+.modal-main {
+  flex: 1;
+  padding: 16px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-main-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.modal-main-header h3 {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.filter-select {
+  padding: 6px 10px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  outline: none;
+}
+
+.record-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.empty-hint {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* ---------- Session Overview Bar ---------- */
+.session-overview {
+  display: flex;
+  gap: 20px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.overview-item {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.overview-item strong {
+  color: var(--text-primary);
+}
+
+/* ---------- View Toggle ---------- */
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.toggle-btn {
+  padding: 6px 16px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: rgba(74, 158, 255, 0.15);
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+/* ---------- Layer Tabs ---------- */
+.layer-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.layer-tab {
+  padding: 8px 14px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px 6px 0 0;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.layer-tab:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.layer-tab.active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  border-bottom-color: var(--accent-blue);
+  background: rgba(74, 158, 255, 0.08);
+}
+
+/* ---------- Layer Content Panel ---------- */
+.layer-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.layer-panel h3 {
+  font-size: 15px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.layer-panel h4.section-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ---------- Stats Grid ---------- */
+.layer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 4px;
+}
+
+.stat-row-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stat-row-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* ---------- Bar Chart ---------- */
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.bar-label {
+  width: 130px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: right;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  flex: 1;
+  height: 16px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-blue), var(--accent-green));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  min-width: 2px;
+}
+
+.bar-value {
+  width: 50px;
+  font-size: 11px;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+/* ---------- MAC Chips ---------- */
+.mac-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mac-chip {
+  padding: 4px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+.mac-count {
+  color: var(--accent-blue);
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+/* ---------- Rate Timeline ---------- */
+.rate-timeline {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 80px;
+  padding: 8px 0;
+}
+
+.rate-point {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.rate-bar {
+  width: 100%;
+  max-width: 24px;
+  background: linear-gradient(0deg, var(--accent-blue), var(--accent-green));
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+}
+
+.rate-label {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ---------- Record Table Row Select ---------- */
+.record-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.record-row:hover {
+  background: rgba(74, 158, 255, 0.08) !important;
+}
+
+.record-row.selected {
+  background: rgba(74, 158, 255, 0.12) !important;
+  outline: 1px solid var(--accent-blue);
+  outline-offset: -1px;
+}
+
+/* ---------- Packet Detail Panel ---------- */
+.packet-detail {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+.packet-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.packet-detail-header h4 {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.packet-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.packet-layer {
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.packet-layer-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  margin-bottom: 8px;
+}
+
+.packet-layer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.packet-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.packet-field-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.packet-field-value {
+  font-size: 12px;
+  color: var(--text-primary);
+  text-align: right;
+  word-break: break-all;
+}
+
+.packet-field-value.mono {
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.packet-field-value.highlight {
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+/* ---------- Risk Badge ---------- */
+.risk-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.risk-badge-lg {
+  padding: 3px 10px;
+  font-size: 12px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.risk-safe { background: rgba(0, 210, 160, 0.15); color: var(--accent-green); }
+.risk-note { background: rgba(255, 192, 72, 0.15); color: var(--accent-yellow); }
+.risk-warn { background: rgba(255, 165, 0, 0.15); color: #ffa500; }
+.risk-high { background: rgba(255, 71, 87, 0.15); color: var(--accent-red); }
+
+/* ---------- Suspicious Row ---------- */
+.row-suspicious {
+  border-left: 3px solid var(--accent-red) !important;
+}
+
+/* ---------- Destination Cell ---------- */
+.dst-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-tag {
+  font-size: 10px;
+  color: var(--accent-blue);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.purpose-cell {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ---------- Analysis Section ---------- */
+.analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.analysis-card {
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.analysis-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+}
+
+.risk-reasons {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 71, 87, 0.05);
+  border-radius: 4px;
+}
+
+.risk-reasons-title {
+  font-size: 11px;
+  color: var(--accent-red);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.risk-reason-item {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 2px 0;
+  padding-left: 10px;
+  position: relative;
+}
+
+.risk-reason-item::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--accent-red);
+}

@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS classification (
     label           VARCHAR(20)   NOT NULL,
     confidence      REAL          NOT NULL,
     features        TEXT,
+    -- 五层模型扩展字段
+    src_mac         VARCHAR(17)   DEFAULT '',
+    dst_mac         VARCHAR(17)   DEFAULT '',
+    frame_type      VARCHAR(10)   DEFAULT '',
+    ttl             INTEGER       DEFAULT 0,
+    ip_version      INTEGER       DEFAULT 4,
+    ip_flags        VARCHAR(10)   DEFAULT '',
+    tcp_flags       VARCHAR(30)   DEFAULT '',
+    window_size     INTEGER       DEFAULT 0,
+    payload_size    INTEGER       DEFAULT 0,
+    analysis_json   TEXT,
+    -- 原有字段
     src_ip          VARCHAR(45)   NOT NULL,
     dst_ip          VARCHAR(45)   NOT NULL,
     src_port        INTEGER,

@@ -1,7 +1,8 @@
 """SmartTraffic 后端入口"""
 import eventlet
 
-eventlet.monkey_patch()
+# thread=False: 保留原生 OS 线程，避免 scapy 的 C 级 sniff() 阻塞 eventlet 事件循环导致后端卡死
+eventlet.monkey_patch(thread=False)
 
 import logging
 import sys

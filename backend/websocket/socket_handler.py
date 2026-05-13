@@ -18,6 +18,7 @@ from pipeline.flow_reassembly import FlowReassembler
 from pipeline.feature_extractor import extract_features
 from pipeline.inference import classifier
 from pipeline.packet_parser import parse_packet
+from pipeline.security_analyzer import analyze_traffic
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,10 @@ class SocketManager:
     @property
     def mode(self):
         return self._capture.mode
+
+    @property
+    def mode_reason(self):
+        return self._capture.mode_reason
 
     @property
     def is_running(self):
@@ -121,8 +126,26 @@ class SocketManager:
             # 推理分类
             result = classifier.predict(features)
 
-            # 写入数据库
+            # 写入数据库（含安全分析）
             flow_db_id = None
+            analysis_json = ""
+            try:
+                analysis = analyze_traffic(parsed, features, result["label"], result["confidence"])
+                import json as _json
+                analysis_json = _json.dumps({
+                    "src_org": analysis.src_org,
+                    "dst_org": analysis.dst_org,
+                    "dst_service": analysis.dst_service,
+                    "purpose": analysis.purpose,
+                    "risk_score": analysis.risk_score,
+                    "risk_level": analysis.risk_level,
+                    "risk_reasons": analysis.risk_reasons,
+                    "suspicious": analysis.suspicious,
+                    "notes": analysis.notes,
+                }, ensure_ascii=False)
+            except Exception as e:
+                logger.error(f"[Socket] 安全分析失败: {e}")
+
             try:
                 flow_db_id = db.upsert_flow(self._session_id, flow)
                 db.insert_classification(
@@ -136,6 +159,16 @@ class SocketManager:
                     src_port=parsed["src_port"],
                     dst_port=parsed["dst_port"],
                     protocol=parsed["protocol"],
+                    src_mac=parsed.get("src_mac", ""),
+                    dst_mac=parsed.get("dst_mac", ""),
+                    frame_type=parsed.get("frame_type", ""),
+                    ttl=parsed.get("ttl", 0),
+                    ip_version=parsed.get("ip_version", 4),
+                    ip_flags=parsed.get("ip_flags", ""),
+                    tcp_flags=parsed.get("tcp_flags", ""),
+                    window_size=parsed.get("window_size", 0),
+                    payload_size=parsed.get("payload_size", 0),
+                    analysis_json=analysis_json,
                 )
             except Exception as e:
                 logger.error(f"[Socket] 数据库写入失败: {e}")
@@ -148,6 +181,15 @@ class SocketManager:
             records = db.query_history(session_id=self._session_id, limit=1)
             if records:
                 rec = records[0]
+                # 解析 analysis_json
+                import json as _json
+                analysis = {}
+                try:
+                    if rec["analysis_json"]:
+                        analysis = _json.loads(rec["analysis_json"])
+                except Exception:
+                    pass
+
                 msg = {
                     "type": "classification",
                     "data": {
@@ -159,6 +201,18 @@ class SocketManager:
                         "protocol": rec["protocol"],
                         "label": rec["label"],
                         "confidence": round(rec["confidence"], 4),
+                        # 五层扩展字段
+                        "src_mac": rec["src_mac"] or "",
+                        "dst_mac": rec["dst_mac"] or "",
+                        "frame_type": rec["frame_type"] or "",
+                        "ttl": rec["ttl"] or 0,
+                        "ip_version": rec["ip_version"] or 4,
+                        "ip_flags": rec["ip_flags"] or "",
+                        "tcp_flags": rec["tcp_flags"] or "",
+                        "window_size": rec["window_size"] or 0,
+                        "payload_size": rec["payload_size"] or 0,
+                        # 安全分析
+                        "analysis": analysis,
                     },
                 }
                 self._socketio.emit("classification", msg, namespace="/")

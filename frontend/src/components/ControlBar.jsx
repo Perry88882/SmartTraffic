@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-export default function ControlBar({ isRunning, onRunningChange, isConnected }) {
+export default function ControlBar({ isRunning, onRunningChange, isConnected, onShowHistory }) {
   const [ifaces, setIfaces] = useState([]);
   const [selectedName, setSelectedName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState({ is_admin: false, mode: "detecting", is_running: false });
+  const [status, setStatus] = useState({ is_admin: false, mode: "detecting", mode_reason: "", is_running: false });
 
   useEffect(() => {
     axios.get("/api/status").then(r => {
@@ -52,7 +52,7 @@ export default function ControlBar({ isRunning, onRunningChange, isConnected }) 
       {!status.is_admin && (
         <span className="admin-warning">非管理员 — 将使用模拟数据</span>
       )}
-      <span className={modeClass}>{modeLabel}</span>
+      <span className={modeClass} title={status.mode_reason}>{modeLabel}</span>
 
       <select
         value={selectedName}
@@ -61,9 +61,13 @@ export default function ControlBar({ isRunning, onRunningChange, isConnected }) 
         className="control-select"
       >
         {ifaces.length === 0 && <option value="">无可用网卡</option>}
-        {ifaces.map(i => (
-          <option key={i.name} value={i.name}>{i.display}</option>
-        ))}
+        {ifaces.map(i => {
+          const ips = (i.ips || []).filter(ip => ip && ip !== "0.0.0.0");
+          const ipLabel = ips.length > 0 ? `  [${ips.join(", ")}]` : "  [无IP]";
+          return (
+            <option key={i.name} value={i.name}>{i.display}{ipLabel}</option>
+          );
+        })}
       </select>
 
       {isRunning ? (
@@ -75,6 +79,10 @@ export default function ControlBar({ isRunning, onRunningChange, isConnected }) 
           {busy ? "..." : "开始抓包"}
         </button>
       )}
+
+      <button className="btn btn-history" onClick={onShowHistory}>
+        抓包记录
+      </button>
 
       <span className="status-indicator">
         <span className={`status-dot ${isRunning ? "running" : isConnected ? "idle" : "offline"}`} />

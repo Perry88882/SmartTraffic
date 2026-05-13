@@ -3,6 +3,7 @@ import ControlBar from "./components/ControlBar";
 import PieChart from "./components/PieChart";
 import LineChart from "./components/LineChart";
 import RecordTable from "./components/RecordTable";
+import HistoryModal from "./components/HistoryModal";
 import useWebSocket from "./hooks/useWebSocket";
 
 const EMPTY_DIST = { 视频: 0, 网页: 0, 游戏: 0, 下载: 0, 会议: 0, 音乐: 0, 其他: 0 };
@@ -17,6 +18,7 @@ export default function App() {
     total_packets: 0,
     duration_seconds: 0,
   });
+  const [showHistory, setShowHistory] = useState(false);
 
   const { lastMessage, isConnected } = useWebSocket();
 
@@ -35,12 +37,12 @@ export default function App() {
       setRecords((prev) => [lastMessage.data, ...prev].slice(0, 50));
     }
     if (lastMessage.type === "statistics") {
-      setDistribution(lastMessage.data.category_distribution);
+      setDistribution(lastMessage.data.category_distribution || EMPTY_DIST);
       setStats({
-        total_bytes: lastMessage.data.total_bytes,
-        current_rate: lastMessage.data.current_rate,
-        total_packets: lastMessage.data.total_packets,
-        duration_seconds: lastMessage.data.duration_seconds,
+        total_bytes: lastMessage.data.total_bytes || 0,
+        current_rate: lastMessage.data.current_rate || 0,
+        total_packets: lastMessage.data.total_packets || 0,
+        duration_seconds: lastMessage.data.duration_seconds || 0,
       });
     }
   }, [lastMessage]);
@@ -51,7 +53,10 @@ export default function App() {
         isRunning={isRunning}
         onRunningChange={handleRunningChange}
         isConnected={isConnected}
+        onShowHistory={() => setShowHistory(true)}
       />
+
+      {showHistory && <HistoryModal onClose={() => setShowHistory(false)} />}
 
       <div className="stats-overview">
         <StatCard label="总流量" value={fmtBytes(stats.total_bytes)} />

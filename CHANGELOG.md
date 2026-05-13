@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.1.0 (2026-05-13)
+
+### 新增
+- **五层模型分析** — packet_parser 提取完整 5 层字段（MAC/帧类型、TTL/IP版本/分片、TCP标志/窗口、载荷大小）；session_analytics 会话级聚合引擎；HistoryModal 五层标签页可视化（物理层/数据链路层/网络层/传输层/应用层）
+- **AI 安全分析引擎** — security_analyzer.py：内置 40+ 条 IP 情报规则（Google/Cloudflare/腾讯/阿里/字节等），8 维度风险评估（端口风险/后门检测/协议异常/SYN扫描/TTL异常/横向移动/DNS隧道/高危端点），输出风险评分与等级
+- **数据包详情面板** — 点击实时表格或历史记录任意行，展开五层协议详情 + 流量识别 + 安全评估卡片
+- **历史记录增强** — 左侧会话列表显示接口/时间/流量/包数；日期筛选器（起止日期 + 快速跳转下拉）；删除会话功能（级联删除）
+- **网卡智能筛选** — 三级兼容探测（get_windows_if_list → IFACES → get_if_list）；过滤虚拟/隧道适配器；按IP活跃度排序；显示网卡IP地址
+
+### 修复
+- 修复旧版 scapy 缺少 get_windows_if_list / IPv6 / Dot11 导致解析器对所有包返回 None
+- 修复 eventlet monkey_patch 将 threading.Thread 变成协程导致 sniff() C调用阻塞整个事件循环
+- 修复 sqlite3.Row 无 .get() 方法导致 session_analytics 500 错误
+- 修复 analyze_traffic 在 try/except 外调用导致后台任务静默死亡
+- 修复 statistics 字段 undefined 导致前端渲染空白
+
+### 变更
+- app.py monkey_patch 改为 thread=False 避免 scapy 阻塞
+- 数据库新增 9 列五层字段 + analysis_json，自动迁移旧表
+- 新增 API: GET /api/dates, DELETE /api/sessions/<id>
+- /api/sessions 和 /api/history 支持 date_from/date_to 日期筛选
+
+---
+
 ## v1.0.0 (2026-05-13)
 
 ### 新增
