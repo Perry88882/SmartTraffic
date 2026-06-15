@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import ControlBar from "./components/ControlBar";
 import PieChart from "./components/PieChart";
 import LineChart from "./components/LineChart";
@@ -13,10 +13,7 @@ export default function App() {
   const [distribution, setDistribution] = useState(EMPTY_DIST);
   const [records, setRecords] = useState([]);
   const [stats, setStats] = useState({
-    total_bytes: 0,
-    current_rate: 0,
-    total_packets: 0,
-    duration_seconds: 0,
+    total_bytes: 0, current_rate: 0, total_packets: 0, duration_seconds: 0,
   });
   const [showHistory, setShowHistory] = useState(false);
 
@@ -33,16 +30,17 @@ export default function App() {
 
   useEffect(() => {
     if (!lastMessage) return;
+    const d = lastMessage.data;
     if (lastMessage.type === "classification") {
-      setRecords((prev) => [lastMessage.data, ...prev].slice(0, 50));
+      setRecords((prev) => [d, ...prev].slice(0, 60));
     }
     if (lastMessage.type === "statistics") {
-      setDistribution(lastMessage.data.category_distribution || EMPTY_DIST);
+      setDistribution(d.category_distribution || EMPTY_DIST);
       setStats({
-        total_bytes: lastMessage.data.total_bytes || 0,
-        current_rate: lastMessage.data.current_rate || 0,
-        total_packets: lastMessage.data.total_packets || 0,
-        duration_seconds: lastMessage.data.duration_seconds || 0,
+        total_bytes: d.total_bytes || 0,
+        current_rate: d.current_rate || 0,
+        total_packets: d.total_packets || 0,
+        duration_seconds: d.duration_seconds || 0,
       });
     }
   }, [lastMessage]);
@@ -58,22 +56,28 @@ export default function App() {
 
       {showHistory && <HistoryModal onClose={() => setShowHistory(false)} />}
 
-      <div className="stats-overview">
-        <StatCard label="总流量" value={fmtBytes(stats.total_bytes)} />
-        <StatCard label="当前速率" value={fmtBytes(stats.current_rate) + "/s"} />
-        <StatCard label="总包数" value={stats.total_packets.toLocaleString()} />
-        <StatCard label="运行时长" value={fmtTime(stats.duration_seconds)} />
-      </div>
+      <StatsBar stats={stats} />
 
       <div className="charts-row">
         <PieChart distribution={distribution} />
         <LineChart records={records} />
       </div>
 
-      <RecordTable records={records.slice(0, 10)} />
+      <RecordTable records={records} />
     </div>
   );
 }
+
+const StatsBar = memo(function StatsBar({ stats }) {
+  return (
+    <div className="stats-overview">
+      <StatCard label="总流量"   value={fmtBytes(stats.total_bytes)} />
+      <StatCard label="当前速率" value={fmtBytes(stats.current_rate) + "/s"} />
+      <StatCard label="总包数"   value={stats.total_packets.toLocaleString()} />
+      <StatCard label="运行时长" value={fmtTime(stats.duration_seconds)} />
+    </div>
+  );
+});
 
 function StatCard({ label, value }) {
   return (

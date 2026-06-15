@@ -1,11 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import * as echarts from "echarts";
 
-/**
- * 饼图组件：展示流量类别分布。
- * 接收 distribution 对象，如 {视频: 45, 网页: 25, ...}
- */
-export default function PieChart({ distribution }) {
+export default memo(function PieChart({ distribution }) {
   const chartRef = useRef(null);
   const instanceRef = useRef(null);
 
@@ -85,4 +81,4 @@ export default function PieChart({ distribution }) {
   }, []);
 
   return <div ref={chartRef} className="chart-container" />;
-}
+});
