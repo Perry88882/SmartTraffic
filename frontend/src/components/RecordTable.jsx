@@ -1,8 +1,8 @@
-import { useState, memo } from "react";
+import { useState } from "react";
 
 const RISK_COLORS = { 安全: "risk-safe", 注意: "risk-note", 可疑: "risk-warn", 高危: "risk-high" };
 
-const RecordTable = memo(function _RecordTable({ records = [] }) {
+export default function RecordTable({ records = [] }) {
   const [selected, setSelected] = useState(null);
 
   return (
@@ -69,8 +69,7 @@ const RecordTable = memo(function _RecordTable({ records = [] }) {
       )}
     </div>
   );
-});
-export default RecordTable;
+}
 
 function PacketDetail({ rec, onClose }) {
   const a = rec.analysis || {};

@@ -71,6 +71,21 @@ body::after {
   100% { top: 100vh; }
 }
 
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--green); }
+  50%      { box-shadow: 0 0 22px var(--green), 0 0 40px rgba(0,210,160,0.3); }
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-2px); }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: var(--border); }
+  50%      { border-color: rgba(0,229,255,0.3); }
+}
+
 #root { position: relative; z-index: 1; min-height: 100vh; }
 
 /* ---------- Layout ---------- */
@@ -140,7 +155,7 @@ body::after {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   letter-spacing: 0.5px;
   position: relative;
 }
@@ -153,7 +168,7 @@ body::after {
 }
 .btn-start:hover:not(:disabled) {
   box-shadow: 0 0 30px rgba(0,229,255,0.4);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.03);
 }
 
 .btn-stop {
@@ -163,7 +178,7 @@ body::after {
 }
 .btn-stop:hover:not(:disabled) {
   box-shadow: 0 0 30px rgba(255,71,87,0.4);
-  transform: translateY(-1px);
+  transform: translateY(-2px) scale(1.03);
 }
 
 .btn-history {
@@ -193,14 +208,14 @@ body::after {
 .status-dot.running {
   background: var(--green);
   box-shadow: 0 0 10px var(--green);
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: pulse 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .status-dot.idle     { background: var(--amber); }
 .status-dot.offline  { background: var(--red); }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; box-shadow: 0 0 10px var(--green); }
-  50%      { opacity: 0.3; box-shadow: 0 0 3px var(--green); }
+  0%, 100% { opacity: 1;   box-shadow: 0 0 10px var(--green); }
+  50%      { opacity: 0.2; box-shadow: 0 0 3px var(--green); }
 }
 .status-text { font-size: 12px; color: var(--text-secondary); }
 
@@ -239,8 +254,9 @@ body::after {
 }
 .stat-card:hover {
   border-color: rgba(255,255,255,0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .stat-card::before {
   content: "";
@@ -280,9 +296,12 @@ body::after {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: border-color 0.3s;
+  transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.chart-container:hover { border-color: rgba(255,255,255,0.1); }
+.chart-container:hover {
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 0 30px rgba(0,229,255,0.06);
+}
 
 .chart-placeholder {
   display: flex; flex-direction: column;
@@ -351,12 +370,12 @@ body::after {
 /* ---------- Record Row ---------- */
 .record-row {
   cursor: pointer;
-  transition: background 0.15s;
-  animation: rowIn 0.3s ease-out;
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: rowIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes rowIn {
-  from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .record-row:hover   { background: rgba(255,255,255,0.04) !important; }
 .record-row.selected { background: rgba(0,229,255,0.06) !important; outline: 1px solid var(--cyan); outline-offset: -1px; }
@@ -380,11 +399,11 @@ body::after {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .packet-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .packet-detail-header h4 { font-size: 14px; color: var(--text-primary); }
@@ -427,7 +446,7 @@ body::after {
   backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex; align-items: center; justify-content: center;
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 

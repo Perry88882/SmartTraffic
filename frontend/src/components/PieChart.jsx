@@ -1,7 +1,7 @@
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef } from "react";
 import * as echarts from "echarts";
 
-export default memo(function PieChart({ distribution }) {
+export default function PieChart({ distribution }) {
   const chartRef = useRef(null);
   const instanceRef = useRef(null);
 
@@ -81,4 +81,4 @@ export default memo(function PieChart({ distribution }) {
   }, []);
 
   return <div ref={chartRef} className="chart-container" />;
-});
+}
